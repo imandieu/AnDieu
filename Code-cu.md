@@ -34,22 +34,7 @@ function installableOnEdit(e) {
 
   if (row <= 1) return;
 
-  // --- LOGIC MỚI: TỰ ĐỘNG FILL BILL (KHI NHẬP MÃ ĐƠN VÀO Ô B2) ---
-  if (sheetName === "Fill" && row === 2 && col === 2) {
-    if (!value) return clearBillTemplate(sheet); // Xóa trắng bill nếu xóa mã đơn
-    fillBillData(ss, sheet, value);
-    return;
-  }
 
-  // --- CÁC LOGIC CŨ (CT, RULE, LOG...) ---
-  if (sheetName === "CT" || sheetName === "Công thức") {
-    // ... Giữ nguyên phần code sinh mã đơn và gửi Telegram bạn đang có ...
-    // Đảm bảo bọc writeAutoLog trong try-catch như tôi đã hướng dẫn để tránh treo mã đơn.
-    try {
-      writeAutoLog(ss, sheetName, range, e.oldValue || "", value || "", "");
-    } catch(err) { console.log("Lỗi log: " + err); }
-  }
-}
   // XỬ LÝ SHEET "RULE" (NHẬP -> LƯU -> XÓA)
   if (sheetName === "Rule" && row === 2 && col === 5 && value) {
     handleRuleInput(ss, sheet, value);
@@ -87,13 +72,19 @@ function installableOnEdit(e) {
       range.clearContent();
     }
 
-// Chuyển sang OUT nếu cột O chọn Yes
-    if (col === 15 && e.value === "Yes") {
-      moveDataToOutSheet(ss, sheet, row);
-    } else {
-      updateFillSheetMapping(ss, sheet, row);
+// --- XỬ LÝ AC4: CHUYỂN DỮ LIỆU SANG SHEET OUT ---
+  if (col === 15 && range.getValue() === "Yes") { // Cột O
+    const outSheet = SpreadsheetApp.getActive().getSheetByName("OUT");
+    if (!outSheet) {
+      SpreadsheetApp.getActive().toast("Lỗi: Không tìm thấy sheet OUT");
+      return;
     }
+    const rowData = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues();
+    outSheet.appendRow(rowData[0]);
+    sheet.deleteRow(row);
+    SpreadsheetApp.getActive().toast("Đã chuyển dữ liệu sang sheet OUT");
   }
+}
 
 // --- 3. CÁC HÀM XỬ LÝ CHI TIẾT ---
 
